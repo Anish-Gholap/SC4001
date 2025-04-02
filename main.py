@@ -5,6 +5,9 @@ import argparse
 import os
 import sys
 
+# Add the current directory to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 def main():
     """
     Main entry point for the emotion classification project.
@@ -15,7 +18,7 @@ def main():
         '--mode', 
         type=str, 
         default='train_lstm',
-        choices=['train_lstm', 'train_rnn', 'train_cnn_lstm', 'test', 'predict', 'compare'],
+        choices=['train_lstm', 'train_rnn', 'test', 'predict', 'compare'],
         help='Mode to run the project in'
     )
     parser.add_argument(
@@ -27,71 +30,75 @@ def main():
         '--model', 
         type=str, 
         default='lstm',
-        choices=['lstm', 'rnn', 'cnn_lstm'],
+        choices=['lstm', 'rnn'],
         help='Model to use for testing or prediction'
     )
     args = parser.parse_args()
 
     # Based on the mode, run the appropriate script
-    if args.mode == 'train_lstm':
-        print("Training LSTM model...")
-        from train_lstm import main as train_lstm_main
-        train_lstm_main()
+    try:
+        if args.mode == 'train_lstm':
+            print("Training LSTM model...")
+            # Use dynamic import to locate the module
+            import importlib
+            train_lstm_module = importlib.import_module('train_lstm')
+            train_lstm_module.main()
+        
+        elif args.mode == 'train_rnn':
+            print("Training simple RNN model...")
+            import importlib
+            train_rnn_module = importlib.import_module('train_simple_rnn')
+            train_rnn_module.main()
+        
+        elif args.mode == 'test':
+            print(f"Testing {args.model} model...")
+            import importlib
+            if args.model == 'lstm':
+                test_module = importlib.import_module('train_lstm')
+                test_module.main()
+            else:
+                test_module = importlib.import_module('train_simple_rnn')
+                test_module.main()
+        
+        elif args.mode == 'predict':
+            print(f"Predicting emotion using {args.model} model...")
+            import importlib
+            inference_module = importlib.import_module('inference')
+            
+            model_path = 'best_emotion_classifier.pth' if args.model == 'lstm' else 'best_simple_rnn_classifier.pth'
+            resources = inference_module.load_inference_resources(model_path, 'vocab.pkl', 'label_encoder.pkl')
+            
+            # Get text from command line or prompt
+            text = args.text
+            if not text:
+                text = input("Enter text to analyze: ")
+            
+            # Predict emotion
+            result = inference_module.predict_emotion(text, resources)
+            
+            # Print results
+            print(f"\nText: {result['text']}")
+            print(f"Predicted emotion: {result['predicted_emotion']} (Confidence: {result['confidence']:.2f}%)")
+            print("\nAll emotions:")
+            for emotion, prob in result['all_emotions']:
+                print(f"  {emotion}: {prob:.2f}%")
+        
+        elif args.mode == 'compare':
+            print("Comparing models...")
+            import importlib
+            compare_module = importlib.import_module('compare_models')
+            compare_module.main()
     
-    elif args.mode == 'train_rnn':
-        print("Training simple RNN model...")
-        from train_simple_rnn import main as train_rnn_main
-        train_rnn_main()
-        
-    elif args.mode == 'train_cnn_lstm':
-        print("Training CNN-LSTM hybrid model...")
-        from train_cnn_lstm import main as train_cnn_lstm_main
-        train_cnn_lstm_main()
-    
-    elif args.mode == 'test':
-        print(f"Testing {args.model} model...")
-        if args.model == 'lstm':
-            from train_lstm import main as test_lstm_main
-            test_lstm_main()
-        elif args.model == 'rnn':
-            from train_simple_rnn import main as test_rnn_main
-            test_rnn_main()
-        elif args.model == 'cnn_lstm':
-            from train_cnn_lstm import main as test_cnn_lstm_main
-            test_cnn_lstm_main()
-    
-    elif args.mode == 'predict':
-        print(f"Predicting emotion using {args.model} model...")
-        from inference import load_inference_resources, predict_emotion
-        
-        if args.model == 'lstm':
-            model_path = 'best_emotion_classifier.pth'
-        elif args.model == 'rnn':
-            model_path = 'best_simple_rnn_classifier.pth'
-        elif args.model == 'cnn_lstm':
-            model_path = 'best_cnn_lstm_classifier.pth'
-        
-        resources = load_inference_resources(model_path, 'vocab.pkl', 'label_encoder.pkl')
-        
-        # Get text from command line or prompt
-        text = args.text
-        if not text:
-            text = input("Enter text to analyze: ")
-        
-        # Predict emotion
-        result = predict_emotion(text, resources)
-        
-        # Print results
-        print(f"\nText: {result['text']}")
-        print(f"Predicted emotion: {result['predicted_emotion']} (Confidence: {result['confidence']:.2f}%)")
-        print("\nAll emotions:")
-        for emotion, prob in result['all_emotions']:
-            print(f"  {emotion}: {prob:.2f}%")
-    
-    elif args.mode == 'compare':
-        print("Comparing models...")
-        from compare_models import main as compare_main
-        compare_main()
+    except ModuleNotFoundError as e:
+        print(f"Error: Could not find module. {e}")
+        print("\nPossible causes:")
+        print("1. Make sure all Python files are in the correct directory")
+        print("2. Check that file names match the imports")
+        print("3. Make sure you're running from the project root directory")
+        sys.exit(1)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
     
     else:
         print(f"Unknown mode: {args.mode}")
