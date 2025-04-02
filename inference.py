@@ -12,7 +12,7 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import RNNLSTMClassifier, SimpleRNNClassifier
+from models import RNNLSTMClassifier, SimpleRNNClassifier,CNNLSTMClassifier
 from preprocessing import preprocess_text, convert_docs_to_ids
 from utils import get_device
 

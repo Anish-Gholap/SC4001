@@ -29,10 +29,16 @@ LEARNING_RATE = 0.001
 EPOCHS = 100                           # Number of training epochs
 BATCH_SIZE = 64
 
+# --- CNN-LSTM Specific Hyperparameters ---
+CNN_N_FILTERS = 100                    # Number of filters in CNN
+CNN_FILTER_SIZES = [3, 4, 5]           # Filter sizes for CNN
+CNN_LSTM_LAYERS = 1                    # Number of LSTM layers after CNN
+
 # --- Model Save Paths ---
 MODEL_SAVE_PATH = 'best_emotion_classifier.pth'
 VOCAB_SAVE_PATH = 'vocab.pkl'
 LABEL_ENCODER_SAVE_PATH = 'label_encoder.pkl'
+CNN_LSTM_SAVE_PATH = 'best_cnn_lstm_classifier.pth'
 
 # --- Ensure directories exist ---
 if not os.path.exists(TEST_DIR):

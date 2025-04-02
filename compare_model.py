@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 from preprocessing import prepare_data_for_training, load_vocab_and_labels
 from dataset import get_data_loaders, TextDataset
-from models import RNNLSTMClassifier, SimpleRNNClassifier
+from models import RNNLSTMClassifier, SimpleRNNClassifier,CNNLSTMClassifier
 from training import evaluate, plot_confusion_matrix
 from utils import set_seed, get_device
 
@@ -263,6 +263,17 @@ def main():
     if simple_rnn_model:
         models['SimpleRNN'] = simple_rnn_model
     
+    # Load CNN-LSTM model
+    from models import CNNLSTMClassifier
+    cnn_lstm_model = load_model(
+        model_class=CNNLSTMClassifier,
+        model_path=config.CNN_LSTM_SAVE_PATH,
+        data=data,
+        device=device,
+        **cnn_lstm_config
+    )
+    if cnn_lstm_model:
+        models['CNN-LSTM'] = cnn_lstm_model
     if not models:
         print("No models could be loaded. Make sure you've trained the models first.")
         return

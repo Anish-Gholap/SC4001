@@ -15,7 +15,7 @@ def main():
         '--mode', 
         type=str, 
         default='train_lstm',
-        choices=['train_lstm', 'train_rnn', 'test', 'predict', 'compare'],
+        choices=['train_lstm', 'train_rnn', 'train_cnn_lstm', 'test', 'predict', 'compare'],
         help='Mode to run the project in'
     )
     parser.add_argument(
@@ -27,7 +27,7 @@ def main():
         '--model', 
         type=str, 
         default='lstm',
-        choices=['lstm', 'rnn'],
+        choices=['lstm', 'rnn', 'cnn_lstm'],
         help='Model to use for testing or prediction'
     )
     args = parser.parse_args()
@@ -42,21 +42,35 @@ def main():
         print("Training simple RNN model...")
         from train_simple_rnn import main as train_rnn_main
         train_rnn_main()
+        
+    elif args.mode == 'train_cnn_lstm':
+        print("Training CNN-LSTM hybrid model...")
+        from train_cnn_lstm import main as train_cnn_lstm_main
+        train_cnn_lstm_main()
     
     elif args.mode == 'test':
         print(f"Testing {args.model} model...")
         if args.model == 'lstm':
             from train_lstm import main as test_lstm_main
             test_lstm_main()
-        else:
+        elif args.model == 'rnn':
             from train_simple_rnn import main as test_rnn_main
             test_rnn_main()
+        elif args.model == 'cnn_lstm':
+            from train_cnn_lstm import main as test_cnn_lstm_main
+            test_cnn_lstm_main()
     
     elif args.mode == 'predict':
         print(f"Predicting emotion using {args.model} model...")
         from inference import load_inference_resources, predict_emotion
         
-        model_path = 'best_emotion_classifier.pth' if args.model == 'lstm' else 'best_simple_rnn_classifier.pth'
+        if args.model == 'lstm':
+            model_path = 'best_emotion_classifier.pth'
+        elif args.model == 'rnn':
+            model_path = 'best_simple_rnn_classifier.pth'
+        elif args.model == 'cnn_lstm':
+            model_path = 'best_cnn_lstm_classifier.pth'
+        
         resources = load_inference_resources(model_path, 'vocab.pkl', 'label_encoder.pkl')
         
         # Get text from command line or prompt
