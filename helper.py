@@ -5,6 +5,8 @@ import pandas as pd
 from nltk.stem import SnowballStemmer # Or WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from collections import Counter
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 PAD_TOKEN = "<PAD>"
@@ -98,3 +100,14 @@ def convert_docs_to_ids(processed_docs, word_to_idx):
     for doc in processed_docs: # No tqdm here, usually fast enough
         docs_as_ids.append([word_to_idx.get(token, unk_index) for token in doc])
     return docs_as_ids
+
+
+def plot_confusion_matrix(cm, class_names, title='Confusion Matrix'):
+    """Plots a confusion matrix using seaborn."""
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.title(title)
+    plt.ylabel('True Label')
+    plt.xlabel('Predicted Label')
+    plt.tight_layout()
+    plt.show()

@@ -18,7 +18,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import torch.nn.functional as F
-from helper import load_classification_data,preprocess_text,build_vocab,convert_docs_to_ids
+from helper import load_classification_data,preprocess_text,build_vocab,convert_docs_to_ids,plot_confusion_matrix
 from nltk.stem import SnowballStemmer # Or WordNetLemmatizer
 from models import RNNLSTMClassifier, SimpleRNNClassifier
 
@@ -167,15 +167,7 @@ def evaluate(model, dataloader, criterion, device):
 
 
 # --- Plot Confusion Matrix ---
-def plot_confusion_matrix(cm, class_names, title='Confusion Matrix'):
-    """Plots a confusion matrix using seaborn."""
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
-    plt.title(title)
-    plt.ylabel('True Label')
-    plt.xlabel('Predicted Label')
-    plt.tight_layout()
-    plt.show()
+
 
 
 # --- Main Execution ---
