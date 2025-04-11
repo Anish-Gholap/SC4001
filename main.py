@@ -1,107 +1,87 @@
-"""
-Main script to run the emotion classification project.
-"""
 import argparse
-import os
-import sys
+from bert_only_pipeline import BertOnlyPipeline
+from bert_cnn_bilstm_pipeline import BertCnnBiLstmPipeline
+from bert_cnn_pipeline import BertCNNPipeline
+from cnn_rnn_pipeline import CNNPipeline, RNNPipeline
 
-# Add the current directory to Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 def main():
-    """
-    Main entry point for the emotion classification project.
-    Allows selection of different modes: train, test, predict, or compare.
-    """
-    parser = argparse.ArgumentParser(description="Emotion Classification with PyTorch")
-    parser.add_argument(
-        '--mode', 
-        type=str, 
-        default='train_lstm',
-        choices=['train_lstm', 'train_rnn', 'test', 'predict', 'compare'],
-        help='Mode to run the project in'
-    )
-    parser.add_argument(
-        '--text', 
-        type=str, 
-        help='Text to predict emotion for (only used in predict mode)'
-    )
-    parser.add_argument(
-        '--model', 
-        type=str, 
-        default='lstm',
-        choices=['lstm', 'rnn'],
-        help='Model to use for testing or prediction'
-    )
+    parser = argparse.ArgumentParser(description='Text Classification Pipeline')
+
+    # Model selection
+    parser.add_argument('--model', type=str, required=True,
+                        choices=['bert_cnn_bilstm', 'bert', 'bert_cnn', 'cnn', 'rnn'],
+                        help='Model architecture to use')
+
+    # Common arguments
+    parser.add_argument('--data_path', type=str, required=True, help='Path to the CSV dataset')
+    parser.add_argument('--text_column', type=str, default='text', help='Column name for text data')
+    parser.add_argument('--label_column', type=str, default='label', help='Column name for labels')
+    parser.add_argument('--max_length', type=int, default=128, help='Maximum sequence length')
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training')
+    parser.add_argument('--epochs', type=int, default=1, help='Number of training epochs')
+    parser.add_argument('--learning_rate', type=float, default=2e-5, help='Learning rate')
+    parser.add_argument('--output_dir', type=str, default='./results', help='Directory to save results')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    parser.add_argument('--dropout_rate', type=float, default=0.5, help='Dropout rate')
+
+    # BERT-specific arguments
+    parser.add_argument('--bert_model', type=str, default='bert-base-uncased', help='BERT model to use')
+    parser.add_argument('--freeze_bert', action='store_true', help='Freeze BERT parameters (for BERT-CNN-BiLSTM)')
+    parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
+                        help='Number of steps to accumulate gradients (for BERT-Only)')
+
+    # CNN-specific arguments
+    parser.add_argument('--min_freq', type=int, default=2, help='Minimum frequency for vocabulary (for CNN/RNN)')
+    parser.add_argument('--embedding_dim', type=int, default=300, help='Dimension of word embeddings (for CNN/RNN)')
+    parser.add_argument('--num_filters', type=int, default=100, help='Number of filters in CNN')
+    parser.add_argument('--filter_sizes', type=str, default='[3, 4, 5]', help='Filter sizes for CNN')
+    parser.add_argument('--use_pretrained_embeddings', action='store_true', help='Use pretrained GloVe embeddings')
+
+    # RNN-specific arguments
+    parser.add_argument('--hidden_dim', type=int, default=256, help='Dimension of RNN hidden state')
+    parser.add_argument('--num_layers', type=int, default=2, help='Number of RNN layers')
+    parser.add_argument('--bidirectional', action='store_true', help='Use bidirectional RNN')
+
     args = parser.parse_args()
 
-    # Based on the mode, run the appropriate script
-    try:
-        if args.mode == 'train_lstm':
-            print("Training LSTM model...")
-            # Use dynamic import to locate the module
-            import importlib
-            train_lstm_module = importlib.import_module('train_lstm')
-            train_lstm_module.main()
-        
-        elif args.mode == 'train_rnn':
-            print("Training simple RNN model...")
-            import importlib
-            train_rnn_module = importlib.import_module('train_simple_rnn')
-            train_rnn_module.main()
-        
-        elif args.mode == 'test':
-            print(f"Testing {args.model} model...")
-            import importlib
-            if args.model == 'lstm':
-                test_module = importlib.import_module('train_lstm')
-                test_module.main()
-            else:
-                test_module = importlib.import_module('train_simple_rnn')
-                test_module.main()
-        
-        elif args.mode == 'predict':
-            print(f"Predicting emotion using {args.model} model...")
-            import importlib
-            inference_module = importlib.import_module('inference')
-            
-            model_path = 'best_emotion_classifier.pth' if args.model == 'lstm' else 'best_simple_rnn_classifier.pth'
-            resources = inference_module.load_inference_resources(model_path, 'vocab.pkl', 'label_encoder.pkl')
-            
-            # Get text from command line or prompt
-            text = args.text
-            if not text:
-                text = input("Enter text to analyze: ")
-            
-            # Predict emotion
-            result = inference_module.predict_emotion(text, resources)
-            
-            # Print results
-            print(f"\nText: {result['text']}")
-            print(f"Predicted emotion: {result['predicted_emotion']} (Confidence: {result['confidence']:.2f}%)")
-            print("\nAll emotions:")
-            for emotion, prob in result['all_emotions']:
-                print(f"  {emotion}: {prob:.2f}%")
-        
-        elif args.mode == 'compare':
-            print("Comparing models...")
-            import importlib
-            compare_module = importlib.import_module('compare_models')
-            compare_module.main()
-    
-    except ModuleNotFoundError as e:
-        print(f"Error: Could not find module. {e}")
-        print("\nPossible causes:")
-        print("1. Make sure all Python files are in the correct directory")
-        print("2. Check that file names match the imports")
-        print("3. Make sure you're running from the project root directory")
-        sys.exit(1)
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        sys.exit(1)
-    
+    # Create and run the appropriate pipeline
+    if args.model == 'bert_cnn_bilstm':
+        # Update output directory to include model name
+        args.output_dir = f"{args.output_dir}/bert_cnn_bilstm"
+        pipeline = BertCnnBiLstmPipeline(args)
+    elif args.model == 'bert':
+        # Update output directory to include model name
+        args.output_dir = f"{args.output_dir}/bert"
+        # Use a smaller dropout for BERT model if not explicitly set
+        if args.dropout_rate == 0.5 and not any('--dropout_rate' in arg for arg in parser._option_string_actions):
+            args.dropout_rate = 0.1
+        pipeline = BertOnlyPipeline(args)
+    elif args.model == 'bert_cnn':
+        # Update output directory to include model name
+        args.output_dir = f"{args.output_dir}/bert_cnn"
+        pipeline = BertCNNPipeline(args)
+    elif args.model == 'cnn':
+        # Update output directory to include model name
+        args.output_dir = f"{args.output_dir}/cnn"
+        # If using CNN, adjust the learning rate if not explicitly set
+        if args.learning_rate == 2e-5 and not any('--learning_rate' in arg for arg in parser._option_string_actions):
+            args.learning_rate = 0.001
+        pipeline = CNNPipeline(args)
+    elif args.model == 'rnn':
+        # Update output directory to include model name
+        args.output_dir = f"{args.output_dir}/rnn"
+        # If using RNN, adjust the learning rate if not explicitly set
+        if args.learning_rate == 2e-5 and not any('--learning_rate' in arg for arg in parser._option_string_actions):
+            args.learning_rate = 0.001
+        pipeline = RNNPipeline(args)
     else:
-        print(f"Unknown mode: {args.mode}")
+        raise ValueError(f"Unknown model: {args.model}")
+
+    # Train the selected model
+    model, accuracy = pipeline.train()
+    print(f"Final accuracy with {args.model}: {accuracy:.4f}")
+
 
 if __name__ == "__main__":
     main()
